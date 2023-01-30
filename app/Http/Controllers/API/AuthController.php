@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\API\BaseController as BaseController;
 use Illuminate\Support\Facades\Auth;
 use Validator;
+use Exception;
 use App\Models\User;
    
 class AuthController extends BaseController
@@ -35,14 +36,22 @@ class AuthController extends BaseController
         if($validator->fails()){
             return $this->sendError('Error validation', $validator->errors());       
         }
-   
+
+        try{
         $input = $request->all();
         $input['password'] = bcrypt($input['password']);
         $user = User::create($input);
         $success['token'] =  $user->createToken('MyAuthApp')->plainTextToken;
         $success['name'] =  $user->name;
-   
+         } catch (\Exception $e){
+        return $this->sendError('Email Already Exists', $e->getMessage());
+        }    
         return $this->sendResponse($success, 'User created successfully.');
     }
    
+    public function logout(){
+        
+        $this->sendResponse([], 'Logout Success');
+        return Auth::user()->currentAccessToken()->delete();
+    }
 }

@@ -5,7 +5,9 @@ namespace App\Http\Controllers\API;
 use Illuminate\Http\Request;
 use App\Http\Controllers\API\BaseController as BaseController;
 use Validator;
+use Exception;
 use App\Models\Item;
+use App\Models\Category;
 use App\Http\Resources\Item as ItemResource;
    
 class ItemController extends BaseController
@@ -20,15 +22,26 @@ class ItemController extends BaseController
     {
         $input = $request->all();
         $validator = Validator::make($input, [
-            'category' => 'required',
             'nama' => 'required',
             'harga' => 'required',
-            
+            'total' => 'required',
+            'warna' => 'required',
+            'category_id' => 'required'
         ]);
         if($validator->fails()){
             return $this->sendError($validator->errors());       
         }
-        $item = Item::create($input);
+        
+        try{
+            $item = Item::create($input);
+            $category = Category::find($input['category_id']);
+            $item->items()->attach($category); 
+        } catch(\Exception $e){
+            return $this->sendError( $e->getMessage());
+        }
+
+
+        
         return $this->sendResponse(new ItemResource($item), 'Post created.');
     }
    
@@ -48,6 +61,8 @@ class ItemController extends BaseController
             'category' => 'required',
             'nama' => 'required',
             'harga' => 'required',
+            'total' => 'required',
+            'warna' => 'required'
         ]);
         if($validator->fails()){
             return $this->sendError($validator->errors());       
@@ -65,4 +80,15 @@ class ItemController extends BaseController
         $item->delete();
         return $this->sendResponse([], 'Post deleted.');
     }
+
+    public function topItem(){
+        $top = Item::orderBy('total', 'desc')->paginate(3)->toArray();
+        return $this->sendResponse($top);
+    }
+
+    public function getItemHasCategory(){
+        $items =  Item::with('items')->get();
+        return $this->sendResponse($items, 'Success');
+    }
+    
 }
